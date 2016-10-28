@@ -1,7 +1,7 @@
 <!doctype html>
 <html ng-app="wordGameApp">
   <head>
-    <title>My Angular App</title>
+    <title>M word game</title>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <script src="https://www.gstatic.com/firebasejs/3.5.2/firebase.js"></script>
@@ -103,12 +103,12 @@ wordGameApp.component('wordgame', {
       'max score for this word:{{ $ctrl.maxScore }}' +
     '</div>' +
     '<div ng-show="!$ctrl.gameStarted">' +
-      '<button ng-click="$ctrl.startGame()" class="form-control btn-primary">Start the game</button>' +
+      '<button ng-click="$ctrl.startGame()" class="btn btn-default">Start the game</button>' +
     '</div>' +
     '<div ng-show="$ctrl.gameEnded">' +
       '<h2>Your final score: {{ $ctrl.totalScore }}</h2>' +
-      '<label>Your name: <input ng-model="username"></label>' +
-      '<button ng-click="$ctrl.submitScore()" class="form-control btn-primary">Submit my score</button>' +
+      '<label>Your name: <input ng-model="username" class="form-control"></label>' +
+      '<button ng-click="$ctrl.submitScore()" class="btn btn-primary">Submit my score</button>' +
     '</div>' +
     '<h2>highscores</h2>' + 
     '<ul ng-repeat="(key, value) in $ctrl.highscores">' + 
@@ -119,7 +119,7 @@ wordGameApp.component('wordgame', {
     this.totalScore = 0;
     this.timeLeft = 0;
     this.gameStarted = false;
-    var gameDuration = 5; // in seconds
+    var gameDuration = 40; // in seconds
     this.highscores = {};
 
     var words = ['duck', 'donald', 'goofy', 'mickey']; // in case firebase is slow, those words would do the trick
@@ -130,6 +130,7 @@ wordGameApp.component('wordgame', {
     var getHighScore = function() {
       database.ref('highscore').once('value', function(snapshot) {
         this.highscores = snapshot.val();
+        $scope.$apply();
       }.bind(this));
     }.bind(this);
     getHighScore();
