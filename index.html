@@ -4,12 +4,28 @@
     <title>My Angular App</title>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <style>
+    .word-input {
+      transition: background-color 1s ease-out;
+      background-color: white;
+    }
+    .fail {
+      background-color: red;
+      transition: none;
+    }
+    .success {
+      background-color: green;
+      transition: none;
+    }
+  </style>
+
   </head>
   <body>
   <div class="jumbotron">
       <div class="container">
 
-        <h1>Soirva guess the word game</h1>
+        <h1>Guess the word game</h1>
+        <p>A test from Soirva for Batiste Bieler</p>
 
         <wordgame></wordgame>
 
@@ -23,18 +39,22 @@
 var words = ['pizza', 'bird', 'coffe', 'java', 'bike'];
 
 function shuffleWord(word) {
-	// Fisher–Yates shuffle
-	// https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
-    var a = word.split(""),
-        n = a.length;
+  // Fisher–Yates shuffle
+  // https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+  var a = word.split(""),
+      n = a.length;
 
-    for(var i = n - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = a[i];
-      a[i] = a[j];
-      a[j] = tmp;
-    }
-    return a.join("");
+  for(var i = n - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = a[i];
+    a[i] = a[j];
+    a[j] = tmp;
+  }
+  return a.join("");
+}
+
+function maxScore(word) {
+  return Math.floor(Math.pow(1.95, (word.length / 3.0)));
 }
 
 function getRandowWord() {
@@ -42,14 +62,63 @@ function getRandowWord() {
 }
 
 var wordGameApp = angular.module('wordGameApp', []);
+
+wordGameApp.directive('flashOnChange', function($animate, $timeout) {
+  return function(scope, elem, attr) {
+      scope.$watch(attr.flashOnChange, function(nv,ov) {
+        if(nv) {
+          $animate.addClass(elem, nv).then(function() {
+            $timeout(function() {$animate.removeClass(elem, nv);}, 100);
+            scope[attr.flashOnChange] = "";
+          });
+        }
+      });
+   };
+});
+
 wordGameApp.component('wordgame', {
   template: 
-    '<h2>Word to guess</h2><h3>{{$ctrl.shuffledWord}}</h3>' + 
-    '<input type="text" class="form-control input-lg" ng-model="typedWord" />',
-  controller: function WordGameController() {
- 	  this.currentWord = getRandowWord();
-    this.shuffledWord = shuffleWord(this.currentWord);
-    this.typedWord = "";
+    '<h2>Word to guess</h2><h3>{{ $ctrl.shuffledWord }}</h3>' +
+    '<input type="text" class="form-control input-lg word-input" flash-on-change="inputState" ng-model="typedWord" />' + 
+    'max score for this word:{{ $ctrl.maxScore }}' + 
+    '<h4>{{ $ctrl.totalScore }}</h4>',
+  controller: function WordGameController($scope) {
+    this.totalScore = 0;
+
+    this.newWord = function() {
+      this.currentWord = getRandowWord();
+      this.shuffledWord = shuffleWord(this.currentWord);
+      while(this.shuffledWord === this.currentWord) {
+        this.shuffledWord = shuffleWord(this.currentWord);
+      }
+      $scope.typedWord = "";
+      this.maxScore = maxScore(this.shuffledWord);
+    }.bind(this);
+
+    $scope.init = function() {
+      newWord();
+    }
+    this.newWord();
+
+    $scope.$watch("typedWord", function(newValue, oldValue) {
+      if(!newValue || !oldValue) {
+        return;
+      }
+      if(newValue.length < oldValue.length) {
+        this.maxScore--;
+      }
+      if(this.maxScore <= 0) {
+        $scope.inputState = "fail";
+        this.newWord();
+      }
+      if(newValue === this.currentWord) {
+        $scope.inputState = "success";
+        this.totalScore += this.maxScore;
+        this.newWord();
+      }
+
+    }.bind(this));
+
   }
 });
 
