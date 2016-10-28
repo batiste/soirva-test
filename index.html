@@ -4,6 +4,7 @@
     <title>My Angular App</title>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://www.gstatic.com/firebasejs/3.5.2/firebase.js"></script>
   <style>
     .word-input {
       transition: background-color 1s ease-out;
@@ -36,7 +37,22 @@
 </html>
 
 <script>
-var words = ['pizza', 'bird', 'coffe', 'java', 'bike'];
+
+// Initialize Firebase
+var config = {
+  apiKey: "AIzaSyBeZbdhwP_mtv4Fe6H4q4UWC4vfeNy2khI",
+  authDomain: "avrios-test.firebaseapp.com",
+  databaseURL: "https://avrios-test.firebaseio.com",
+  storageBucket: "avrios-test.appspot.com",
+  messagingSenderId: "379879496453"
+};
+firebase.initializeApp(config);
+var database = firebase.database();
+
+// setting the database
+// database.ref('words').set(
+//   ['pizza', 'bird', 'coffe', 'java', 'bike', 'fly', 'sandwich', 'leaf', 'airplane', 'tofu']
+// );
 
 function shuffleWord(word) {
   // Fisher–Yates shuffle
@@ -57,7 +73,10 @@ function maxScore(word) {
   return Math.floor(Math.pow(1.95, (word.length / 3.0)));
 }
 
-function getRandowWord() {
+function getRandowWord(words) {
+  if(words.length < 2) {
+    throw "Not enough words not loaded";
+  }
   return words[Math.floor(Math.random() * words.length)];
 }
 
@@ -79,25 +98,44 @@ wordGameApp.directive('flashOnChange', function($animate, $timeout) {
 wordGameApp.component('wordgame', {
   template: 
     '<div ng-show="$ctrl.gameStarted">' +
-    '<h2>Current score: {{ $ctrl.totalScore }}</h2><p>Time left: {{ $ctrl.timeLeft }}</p>' +
-    '<label>Word to guess: <strong>{{ $ctrl.shuffledWord }}</strong> </label><input type="text" class="form-control input-lg word-input" flash-on-change="inputState" ng-model="typedWord" />' + 
-    'max score for this word:{{ $ctrl.maxScore }}' +
+      '<h2>Current score: {{ $ctrl.totalScore }}</h2><p>Time left: {{ $ctrl.timeLeft }}</p>' +
+      '<label>Word to guess: <strong>{{ $ctrl.shuffledWord }}</strong> </label><input type="text" class="form-control input-lg word-input" flash-on-change="inputState" ng-model="typedWord" />' + 
+      'max score for this word:{{ $ctrl.maxScore }}' +
     '</div>' +
     '<div ng-show="!$ctrl.gameStarted">' +
-    '<button ng-click="startGame()" class="form-control">Start the game</button>' +
+      '<button ng-click="$ctrl.startGame()" class="form-control btn-primary">Start the game</button>' +
     '</div>' +
     '<div ng-show="$ctrl.gameEnded">' +
-    '<h2>Final score: {{ $ctrl.totalScore }}</h2>' +
-    '</div>', 
+      '<h2>Your final score: {{ $ctrl.totalScore }}</h2>' +
+      '<label>Your name: <input ng-model="username"></label>' +
+      '<button ng-click="$ctrl.submitScore()" class="form-control btn-primary">Submit my score</button>' +
+    '</div>' +
+    '<h2>highscores</h2>' + 
+    '<ul ng-repeat="(key, value) in $ctrl.highscores">' + 
+      '<li>{{ key }}: {{ value }}</li>' +
+    '<ul>',
 
   controller: function WordGameController($scope, $timeout, $interval) {
     this.totalScore = 0;
     this.timeLeft = 0;
     this.gameStarted = false;
-    var gameDuration = 5;
+    var gameDuration = 5; // in seconds
+    this.highscores = {};
+
+    var words = ['duck', 'donald', 'goofy', 'mickey']; // in case firebase is slow, those words would do the trick
+    database.ref('words').once('value', function(snapshot) {
+      words = snapshot.val();
+    });
+
+    var getHighScore = function() {
+      database.ref('highscore').once('value', function(snapshot) {
+        this.highscores = snapshot.val();
+      }.bind(this));
+    }.bind(this);
+    getHighScore();
 
     this.newWord = function() {
-      this.currentWord = getRandowWord();
+      this.currentWord = getRandowWord(words);
       this.shuffledWord = shuffleWord(this.currentWord);
       while(this.shuffledWord === this.currentWord) {
         this.shuffledWord = shuffleWord(this.currentWord);
@@ -110,9 +148,9 @@ wordGameApp.component('wordgame', {
       this.timeLeft--;
     }.bind(this);
 
-    this.newWord();
+    //this.newWord();
 
-    $scope.startGame = function() {
+    this.startGame = function() {
       this.totalScore = 0;
       this.gameStarted = true;
       this.gameEnded = false;
@@ -127,6 +165,18 @@ wordGameApp.component('wordgame', {
       this.gameStarted = false;
       this.gameEnded = true;
       this.timeLeft = 0;
+    }.bind(this);
+
+    this.submitScore = function(newValue) {
+      if(!$scope.username) {
+        return;
+      }
+      database.ref('highscore/' + $scope.username).set(
+        this.totalScore
+      ).then(function(){
+        getHighScore();
+      });
+
     }.bind(this);
 
     $scope.$watch("typedWord", function(newValue, oldValue) {
@@ -145,7 +195,6 @@ wordGameApp.component('wordgame', {
         this.totalScore += this.maxScore;
         this.newWord();
       }
-
     }.bind(this));
 
   }
