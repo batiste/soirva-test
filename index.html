@@ -78,12 +78,23 @@ wordGameApp.directive('flashOnChange', function($animate, $timeout) {
 
 wordGameApp.component('wordgame', {
   template: 
-    '<h2>Word to guess</h2><h3>{{ $ctrl.shuffledWord }}</h3>' +
-    '<input type="text" class="form-control input-lg word-input" flash-on-change="inputState" ng-model="typedWord" />' + 
-    'max score for this word:{{ $ctrl.maxScore }}' + 
-    '<h4>{{ $ctrl.totalScore }}</h4>',
-  controller: function WordGameController($scope) {
+    '<div ng-show="$ctrl.gameStarted">' +
+    '<h2>Current score: {{ $ctrl.totalScore }}</h2><p>Time left: {{ $ctrl.timeLeft }}</p>' +
+    '<label>Word to guess: <strong>{{ $ctrl.shuffledWord }}</strong> </label><input type="text" class="form-control input-lg word-input" flash-on-change="inputState" ng-model="typedWord" />' + 
+    'max score for this word:{{ $ctrl.maxScore }}' +
+    '</div>' +
+    '<div ng-show="!$ctrl.gameStarted">' +
+    '<button ng-click="startGame()" class="form-control">Start the game</button>' +
+    '</div>' +
+    '<div ng-show="$ctrl.gameEnded">' +
+    '<h2>Final score: {{ $ctrl.totalScore }}</h2>' +
+    '</div>', 
+
+  controller: function WordGameController($scope, $timeout, $interval) {
     this.totalScore = 0;
+    this.timeLeft = 0;
+    this.gameStarted = false;
+    var gameDuration = 5;
 
     this.newWord = function() {
       this.currentWord = getRandowWord();
@@ -95,10 +106,28 @@ wordGameApp.component('wordgame', {
       this.maxScore = maxScore(this.shuffledWord);
     }.bind(this);
 
-    $scope.init = function() {
-      newWord();
-    }
+    this.countdown = function() {
+      this.timeLeft--;
+    }.bind(this);
+
     this.newWord();
+
+    $scope.startGame = function() {
+      this.totalScore = 0;
+      this.gameStarted = true;
+      this.gameEnded = false;
+      this.newWord();
+      this.timeLeft = gameDuration;
+      $timeout(this.endGame, gameDuration * 1000);
+      this.countDownPromise = $interval(this.countdown, 1000);
+    }.bind(this);
+
+    this.endGame = function() {
+      $interval.cancel(this.countDownPromise);
+      this.gameStarted = false;
+      this.gameEnded = true;
+      this.timeLeft = 0;
+    }.bind(this);
 
     $scope.$watch("typedWord", function(newValue, oldValue) {
       if(!newValue || !oldValue) {
