@@ -1,9 +1,57 @@
 <!doctype html>
-<html ng-app>
+<html ng-app="wordGameApp">
   <head>
     <title>My Angular App</title>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
   </head>
   <body>
+  <div class="jumbotron">
+      <div class="container">
+
+        <h1>Soirva guess the word game</h1>
+
+        <wordgame></wordgame>
+
+      </div>
+    </div>
+
   </body>
 </html>
+
+<script>
+var words = ['pizza', 'bird', 'coffe', 'java', 'bike'];
+
+function shuffleWord(word) {
+	// Fisher–Yates shuffle
+	// https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+    var a = word.split(""),
+        n = a.length;
+
+    for(var i = n - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i];
+      a[i] = a[j];
+      a[j] = tmp;
+    }
+    return a.join("");
+}
+
+function getRandowWord() {
+  return words[Math.floor(Math.random() * words.length)];
+}
+
+var wordGameApp = angular.module('wordGameApp', []);
+wordGameApp.component('wordgame', {
+  template: 
+    '<h2>Word to guess</h2><h3>{{$ctrl.shuffledWord}}</h3>' + 
+    '<input type="text" class="form-control input-lg" ng-model="typedWord" />',
+  controller: function WordGameController() {
+ 	  this.currentWord = getRandowWord();
+    this.shuffledWord = shuffleWord(this.currentWord);
+    this.typedWord = "";
+  }
+});
+
+
+</script>
